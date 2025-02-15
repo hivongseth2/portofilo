@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Physics2DPlugin } from "gsap/all";
+import { FaJs, FaReact, FaVuejs, FaNodeJs, FaGit } from "react-icons/fa";
+import { SiNextdotjs, SiCss3, SiHtml5 } from "react-icons/si";
+import { IconContext } from "react-icons";
 
 gsap.registerPlugin(ScrollTrigger, Physics2DPlugin);
 
@@ -12,6 +15,16 @@ const About = () => {
   const contentRef = useRef(null);
   const skillsRef = useRef(null);
   const avatarRef = useRef(null);
+  const skillIcons = {
+    JavaScript: FaJs,
+    React: FaReact,
+    "Vue.js": FaVuejs,
+    "Next.js": SiNextdotjs,
+    CSS: SiCss3,
+    HTML: SiHtml5,
+    "Node.js": FaNodeJs,
+    Git: FaGit,
+  };
 
   useEffect(() => {
     const skills = skillsRef.current.querySelectorAll(".skill");
@@ -20,7 +33,7 @@ const About = () => {
       gsap.set(skill, {
         y: gsap.utils.random(50, 250),
         x: gsap.utils.random(-100, 300),
-        opacity: 0.5,
+        opacity: 3,
         scale: gsap.utils.random(0.8, 1.2),
       });
 
@@ -110,7 +123,7 @@ const About = () => {
           gsap.to(skill, {
             y: gsap.utils.random(-500, 800),
             x: gsap.utils.random(-700, 800),
-            rotation: gsap.utils.random(-10, 10),
+            // rotation: gsap.utils.random(-10, 10),
             duration: 7, // Thời gian dài hơn để bay chậm chậm
             ease: "sine.inOut",
           });
@@ -129,7 +142,7 @@ const About = () => {
         skill.addEventListener("mouseleave", () => {
           gsap.to(skill, {
             scale: 1,
-            y: "+=2",
+            y: "+=20",
             duration: 2,
             ease: "power2.out",
           });
@@ -153,11 +166,23 @@ const About = () => {
     return () => ctx.revert();
   }, []);
 
+  useEffect(() => {
+    if (!avatarRef.current) return;
+
+    gsap.to(avatarRef.current, {
+      boxShadow: "0px 0px 70px 60px rgba(255, 255, 255, 0.19)",
+      repeat: -1,
+      yoyo: true,
+      duration: 2,
+      ease: "sine.inOut",
+    });
+  }, []);
+
   return (
     <section
       ref={aboutRef}
       id="about"
-      className="py-20 relative overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 min-h-screen flex items-center"
+      className="py-20 relative overflow-hidden min-h-screen flex items-center  bg-gradient from-black to-gray-900"
     >
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -202,23 +227,28 @@ const About = () => {
               ref={skillsRef}
               className="skills-container relative h-[300px]"
             >
-              {[
-                "JavaScript",
-                "React",
-                "Vue.js",
-                "Next.js",
-                "CSS",
-                "HTML",
-                "Node.js",
-                "Git",
-              ].map((skill, index) => (
-                <div
-                  key={skill}
-                  className="skill absolute bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-lg px-4 py-2 text-white font-semibold cursor-pointer transition-all duration-300"
-                >
-                  {skill}
-                </div>
-              ))}
+              <IconContext.Provider value={{ size: "24px" }}>
+                {[
+                  "JavaScript",
+                  "React",
+                  "Vue.js",
+                  "Next.js",
+                  "CSS",
+                  "HTML",
+                  "Node.js",
+                  "Git",
+                ].map((skill) => {
+                  const IconComponent = skillIcons[skill];
+                  return (
+                    <div
+                      key={skill}
+                      className="skill absolute bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-3xl px-2 py-2 text-white font-semibold cursor-pointer"
+                    >
+                      <IconComponent />
+                    </div>
+                  );
+                })}
+              </IconContext.Provider>
             </div>
           </div>
         </div>

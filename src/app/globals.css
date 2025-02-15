@@ -141,3 +141,48 @@ g[id^="BudGroup"] g[id^="BudGroup"] g[id^="Bud"],
   transform: scale(1);
   filter: blur(0);
 }
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+    opacity: 0.5;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+    opacity: 0.5;
+  }
+}
+
+.skill {
+  animation: glow 3s infinite alternate ease-in-out;
+}

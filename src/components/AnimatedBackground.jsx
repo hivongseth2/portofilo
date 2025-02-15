@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useMemo } from "react";
 import anime from "animejs";
+import Hero from "./Hero";
 
 const DOTS_COUNT = 50;
 
@@ -22,8 +23,10 @@ const AnimatedBackground = () => {
   useEffect(() => {
     anime({
       targets: ".dot",
-      translateX: () => anime.random(-window.innerWidth / 2, window.innerWidth / 2),
-      translateY: () => anime.random(-window.innerHeight / 2, window.innerHeight / 2),
+      translateX: () =>
+        anime.random(-window.innerWidth / 2, window.innerWidth / 2),
+      translateY: () =>
+        anime.random(-window.innerHeight / 2, window.innerHeight / 2),
       scale: () => anime.random(0.2, 1),
       opacity: () => anime.random(0.2, 0.5),
       duration: () => anime.random(2000, 4000),
@@ -40,6 +43,8 @@ const AnimatedBackground = () => {
       className="fixed inset-0 pointer-events-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
+      {/* <Hero></Hero> */}
+
       {dots.map((dot) => (
         <div
           key={dot.id}

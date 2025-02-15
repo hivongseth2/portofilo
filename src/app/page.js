@@ -48,9 +48,9 @@ export default function Home() {
   return (
     <main ref={mainRef} className="overflow-hidden">
       <AnimatedBackground />
+      {/* <Hero /> */}
       <About />
 
-      {/* <Hero /> */}
       <Skills />
       <Projects />
       <Experience />

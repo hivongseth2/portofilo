@@ -1,46 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const Hero = () => {
+gsap.registerPlugin(ScrollTrigger);
+
+const HeroCombined = () => {
   const canvasRef = useRef(null);
-  const textCanvasRef = useRef(null);
   const [showText, setShowText] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || !textCanvasRef.current) return;
+    if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const textCanvas = textCanvasRef.current;
-    const textCtx = textCanvas.getContext("2d");
 
     let cloth;
-    let boundsx;
-    let boundsy;
-    const mouse = {
-      down: false,
-      button: 1,
-      x: 0,
-      y: 0,
-      px: 0,
-      py: 0,
-    };
+    let boundsx, boundsy;
 
-    const physics_accuracy = 3;
-    const mouse_influence = 20;
-    const mouse_cut = 5;
-    const gravity = 700;
-    const cloth_height = 120;
-    const cloth_width = 439;
-    const start_y = 0;
-    const spacing = 6;
-    const tear_distance = 60;
+    const physics_accuracy = 5;
+    const gravity = 180;
+    const cloth_height = 65; // Reduced from 130
+    const cloth_width = 30; // Reduced from 60
+    const start_y = 20;
+    const spacing = 8; // Increased from 4
+    const tear_distance = 1600;
+    const restore_distance = 50;
 
     class Point {
       constructor(x, y) {
         this.x = x;
         this.y = y;
+        this.initialX = x;
+        this.initialY = y;
         this.px = x;
         this.py = y;
         this.vx = 0;
@@ -48,70 +41,56 @@ const Hero = () => {
         this.pin_x = null;
         this.pin_y = null;
         this.constraints = [];
+        this.originalConstraints = [];
+        this.torn = false;
       }
 
       update(delta) {
-        if (mouse.down) {
-          const diff_x = this.x - mouse.x;
-          const diff_y = this.y - mouse.y;
-          const dist = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
-
-          if (mouse.button === 1) {
-            if (dist < mouse_influence) {
-              this.px = this.x - (mouse.x - mouse.px) * 1.8;
-              this.py = this.y - (mouse.y - mouse.py) * 1.8;
-            }
-          } else if (dist < mouse_cut) {
-            this.constraints = [];
-          }
-        }
-
-        this.add_force(0, gravity);
-
-        delta *= delta;
-        const nx = this.x + (this.x - this.px) * 0.99 + (this.vx / 2) * delta;
-        const ny = this.y + (this.y - this.py) * 0.99 + (this.vy / 2) * delta;
-
-        this.px = this.x;
-        this.py = this.y;
-
-        this.x = nx;
-        this.y = ny;
-
-        this.vy = this.vx = 0;
-      }
-
-      draw() {
-        if (!this.constraints.length) return;
-
-        let i = this.constraints.length;
-        while (i--) this.constraints[i].draw();
-      }
-
-      resolve_constraints() {
-        if (this.pin_x != null && this.pin_y != null) {
+        if (this.pin_x !== null && this.pin_y !== null) {
           this.x = this.pin_x;
           this.y = this.pin_y;
           return;
         }
 
-        let i = this.constraints.length;
-        while (i--) this.constraints[i].resolve();
+        const diff_x = this.x - this.px;
+        const diff_y = this.y - this.py;
+
+        this.vx = diff_x / delta;
+        this.vy = diff_y / delta;
+
+        this.px = this.x;
+        this.py = this.y;
+
+        this.vy += gravity * delta;
+
+        this.x += this.vx * delta;
+        this.y += this.vy * delta;
 
         if (this.x > boundsx) {
           this.x = 2 * boundsx - this.x;
-        } else if (1 > this.x) {
+        } else if (this.x < 1) {
           this.x = 2 - this.x;
         }
-        if (this.y < 1) {
-          this.y = 2 - this.y;
-        } else if (this.y > boundsy) {
+
+        if (this.y > boundsy) {
           this.y = 2 * boundsy - this.y;
+        } else if (this.y < 1) {
+          this.y = 2 - this.y;
         }
       }
 
+      draw() {
+        this.constraints.forEach((constraint) => constraint.draw());
+      }
+
+      resolve_constraints() {
+        this.constraints.forEach((constraint) => constraint.resolve());
+      }
+
       attach(point) {
-        this.constraints.push(new Constraint(this, point));
+        const constraint = new Constraint(this, point);
+        this.constraints.push(constraint);
+        this.originalConstraints.push(constraint);
       }
 
       remove_constraint(constraint) {
@@ -121,15 +100,31 @@ const Hero = () => {
       add_force(x, y) {
         this.vx += x;
         this.vy += y;
-
-        const round = 400;
-        this.vx = ~~(this.vx * round) / round;
-        this.vy = ~~(this.vy * round) / round;
       }
 
       pin(pinx, piny) {
         this.pin_x = pinx;
         this.pin_y = piny;
+      }
+
+      unpin() {
+        this.pin_x = null;
+        this.pin_y = null;
+      }
+
+      restore(factor) {
+        if (this.torn) {
+          this.x += (this.initialX - this.x) * factor;
+          this.y += (this.initialY - this.y) * factor;
+
+          if (
+            Math.abs(this.x - this.initialX) < 1 &&
+            Math.abs(this.y - this.initialY) < 1
+          ) {
+            this.torn = false;
+            this.constraints = [...this.originalConstraints];
+          }
+        }
       }
     }
 
@@ -146,7 +141,12 @@ const Hero = () => {
         const dist = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
         const diff = (this.length - dist) / dist;
 
-        if (dist > tear_distance) this.p1.remove_constraint(this);
+        if (dist > tear_distance) {
+          this.p1.remove_constraint(this);
+          this.p2.remove_constraint(this);
+          this.p1.torn = true;
+          this.p2.torn = true;
+        }
 
         const px = diff_x * diff * 0.5;
         const py = diff_y * diff * 0.5;
@@ -166,17 +166,14 @@ const Hero = () => {
     class Cloth {
       constructor() {
         this.points = [];
-
         const start_x = canvas.width / 2 - (cloth_width * spacing) / 2;
 
         for (let y = 0; y <= cloth_height; y++) {
           for (let x = 0; x <= cloth_width; x++) {
             const p = new Point(start_x + x * spacing, start_y + y * spacing);
-
-            x !== 0 && p.attach(this.points[this.points.length - 1]);
-            y === 0 && p.pin(p.x, p.y);
-            y !== 0 && p.attach(this.points[x + (y - 1) * (cloth_width + 1)]);
-
+            if (x !== 0) p.attach(this.points[this.points.length - 1]);
+            if (y === 0) p.pin(p.x, p.y);
+            if (y !== 0) p.attach(this.points[x + (y - 1) * (cloth_width + 1)]);
             this.points.push(p);
           }
         }
@@ -184,165 +181,195 @@ const Hero = () => {
 
       update() {
         let i = physics_accuracy;
-
         while (i--) {
-          let p = this.points.length;
-          while (p--) this.points[p].resolve_constraints();
+          this.points.forEach((point) => {
+            point.resolve_constraints();
+          });
         }
 
-        i = this.points.length;
-        while (i--) this.points[i].update(0.016);
+        this.points.forEach((point) => {
+          point.update(0.016);
+        });
       }
 
       draw() {
         ctx.beginPath();
-
-        let i = this.points.length;
-        while (i--) this.points[i].draw();
-
+        this.points.forEach((point) => {
+          point.draw();
+        });
         ctx.stroke();
       }
 
-      tearPercentage() {
-        const totalPoints = this.points.length;
-        const tornPoints = this.points.filter(
-          (p) => p.constraints.length === 0
-        ).length;
-        return (tornPoints / totalPoints) * 100;
+      tear(mouseX, mouseY, radius) {
+        this.points.forEach((point) => {
+          if (
+            Math.abs(point.x - mouseX) < radius &&
+            Math.abs(point.y - mouseY) < radius
+          ) {
+            if (Math.random() > 0.5) {
+              point.constraints = [];
+              point.torn = true;
+            }
+          }
+        });
+      }
+
+      restore(factor) {
+        this.points.forEach((point) => {
+          point.restore(factor);
+        });
+      }
+
+      applyWind(wind) {
+        this.points.forEach((point) => {
+          point.add_force(wind.x, wind.y);
+        });
       }
     }
 
-    function update() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Function to draw the symbol and NTL text
+    function drawSymbol(progress) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const size = 100;
 
+      ctx.save();
+      ctx.translate(centerX, centerY);
+
+      // Áp dụng hiệu ứng glow cho đường viền của biểu tượng
+      ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
+      ctx.shadowBlur = 15;
+
+      // Tạo đường path cho biểu tượng (gồm hình tròn, tam giác và vuông)
+      ctx.beginPath();
+      // Hình tròn
+      ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+      // Tam giác
+      ctx.moveTo(0, -size / 2);
+      ctx.lineTo(-size / 2, size / 2);
+      ctx.lineTo(size / 2, size / 2);
+      ctx.closePath();
+      // Vuông
+      ctx.rect(-size / 3, -size / 3, (size * 2) / 3, (size * 2) / 3);
+
+      // Thiết lập style cho stroke
+      ctx.strokeStyle = "#eee";
+      ctx.lineWidth = 2;
+
+      // Vì canvas không hỗ trợ getTotalLength, ta dùng fallback
+      const totalLength = 1500;
+      ctx.setLineDash([totalLength]);
+      ctx.lineDashOffset = totalLength * (1 - progress);
+
+      // Vẽ đường path của biểu tượng (với hiệu ứng glow)
+      ctx.stroke();
+
+      // Loại bỏ shadow trước khi vẽ chữ để chữ không bị mờ
+      ctx.shadowBlur = 0;
+
+      // Vẽ chữ "NTL" ở giữa biểu tượng
+      ctx.font = "bold 20px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = `rgba(255, 255, 255, ${progress})`;
+      ctx.fillText("NTL", 0, 0);
+
+      ctx.restore();
+    }
+
+    let animationId;
+
+    function update(progress) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       cloth.update();
       cloth.draw();
+      drawSymbol(progress);
+    }
 
-      const tearPercentage = cloth.tearPercentage();
-      if (tearPercentage > 50 && !showText) {
-        setShowText(true);
+    function startAnimation(progress) {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
       }
-
-      requestAnimationFrame(update);
+      update(progress);
+      animationId = requestAnimationFrame(() => startAnimation(progress));
     }
 
     function start() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      textCanvas.width = window.innerWidth;
-      textCanvas.height = window.innerHeight;
-
       ctx.strokeStyle = "#56021F";
-
       cloth = new Cloth();
-
       boundsx = canvas.width - 1;
       boundsy = canvas.height - 1;
-
-      update();
+      startAnimation(0);
     }
 
-    function handleResize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      textCanvas.width = window.innerWidth;
-      textCanvas.height = window.innerHeight;
-      boundsx = canvas.width - 1;
-      boundsy = canvas.height - 1;
-      start();
-    }
-
-    window.addEventListener("resize", handleResize);
-
-    canvas.onmousedown = (e) => {
-      mouse.button = e.which;
-      mouse.px = mouse.x;
-      mouse.py = mouse.y;
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
-      mouse.down = true;
-      e.preventDefault();
-    };
-
-    canvas.onmouseup = (e) => {
-      mouse.down = false;
-      e.preventDefault();
-    };
-
-    canvas.onmousemove = (e) => {
-      mouse.px = mouse.x;
-      mouse.py = mouse.y;
-      const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
-      e.preventDefault();
-    };
-
-    canvas.oncontextmenu = (e) => {
-      e.preventDefault();
-    };
-
-    textCanvas.onmousemove = (e) => {
-      if (showText) {
-        const rect = textCanvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        textCtx.clearRect(0, 0, textCanvas.width, textCanvas.height);
-        drawText(x, y);
-      }
-    };
-
-    function drawText(mouseX, mouseY) {
-      const text = "NguyenThanhLuan";
-      textCtx.font = "bold 72px Arial";
-      textCtx.fillStyle = "#ff3366";
-
-      const textWidth = textCtx.measureText(text).width;
-      const textHeight = 72;
-      const x = (textCanvas.width - textWidth) / 2;
-      const y = (textCanvas.height + textHeight) / 2;
-
-      for (let i = 0; i < text.length; i++) {
-        const charWidth = textCtx.measureText(text[i]).width;
-        const charX = x + textCtx.measureText(text.substring(0, i)).width;
-        const charY = y;
-
-        const dx = mouseX - (charX + charWidth / 2);
-        const dy = mouseY - charY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDistance = 100;
-
-        if (distance < maxDistance) {
-          const angle = Math.atan2(dy, dx);
-          const displacement = (1 - distance / maxDistance) * 20;
-          const newX = charX + Math.cos(angle) * displacement;
-          const newY = charY + Math.sin(angle) * displacement;
-          textCtx.fillText(text[i], newX, newY);
-        } else {
-          textCtx.fillText(text[i], charX, charY);
-        }
-      }
-    }
-
+    window.addEventListener("resize", start);
     start();
 
+    let lastScrollTop = 0;
+    let scrollDirection = 0;
+    let scrollSpeed = 0;
+
+    // ScrollTrigger setup
+    ScrollTrigger.create({
+      trigger: "body",
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate: (self) => {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        scrollDirection = scrollTop > lastScrollTop ? 1 : -1;
+        scrollSpeed = Math.abs(scrollTop - lastScrollTop);
+        lastScrollTop = scrollTop;
+
+        const progress = self.progress;
+        const tearRadius = 30 + progress * 50;
+        const restoreFactor = 1 - progress;
+        const windForce = {
+          x: scrollDirection + scrollSpeed * 0.04,
+          y: scrollDirection + scrollSpeed * 0.04,
+        };
+
+        if (scrollDirection === 1) {
+          // Scrolling down: apply tearing effect
+          const clothYMin = start_y;
+          const clothYMax = start_y + cloth_height * spacing;
+          const mappedY = clothYMin + progress * (clothYMax - clothYMin);
+          const tearX = canvas.width / 2;
+
+          cloth.tear(tearX, mappedY, tearRadius);
+          cloth.applyWind({ x: windForce.x, y: windForce.y });
+        } else {
+          // Scrolling up: apply restore effect
+          cloth.restore(restoreFactor);
+          // cloth.applyWind({ x: -windForce.x, y: -windForce.y });
+        }
+
+        // Update symbol opacity based on scroll progress
+        startAnimation(progress);
+      },
+    });
+
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", start);
+      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
     };
-  }, [showText]);
+  }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 to-black">
+    <section className="fixed top-0 w-full h-screen overflow-hidden bg-gradient-to-b from-gray-900 to-black">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <canvas
-        ref={textCanvasRef}
-        className="absolute inset-0 w-full h-full"
-        style={{ display: showText ? "block" : "none" }}
-      />
+      <div className="relative z-10 text-white text-center">
+        {/* <h1 className="text-4xl md:text-6xl font-bold mb-4">
+          Welcome to My Portfolio
+        </h1>
+        <p className="text-xl md:text-2xl">Scroll down to explore</p> */}
+      </div>
     </section>
   );
 };
 
-export default Hero;
+export default HeroCombined;
