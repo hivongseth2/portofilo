@@ -3,11 +3,10 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap-trial/SplitText"; // ✅ Import từ gsap-trial
-import { FaBriefcase, FaCalendarAlt } from "react-icons/fa";
+import { motion } from "framer-motion";
 import { useAnimation } from "../components/AnimationProvider";
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger);
 
 const experiences = [
   {
@@ -75,11 +74,11 @@ const ExperienceCard = ({ experience, index }) => {
           {experience.title}
         </h3>
         <p className="text-gray-300 font-medium mb-2 flex items-center">
-          <FaBriefcase className="mr-2 text-purple-400" />
+          {/* Briefcase Icon */}
           {experience.company}
         </p>
         <p className="text-gray-400 text-sm mb-4 flex items-center">
-          <FaCalendarAlt className="mr-2 text-purple-400" />
+          {/* Calendar Icon */}
           {experience.period}
         </p>
         <p className="text-gray-300 leading-relaxed">
@@ -98,23 +97,6 @@ const Experience = () => {
     if (prefersReducedMotion) return;
 
     const ctx = gsap.context(() => {
-      const splitTitle = new SplitText(".experience-title", {
-        type: "chars, words",
-      });
-
-      gsap.from(splitTitle.chars, {
-        opacity: 0,
-        y: 50,
-        rotateX: -90,
-        stagger: 0.02,
-        duration: 1.2,
-        ease: "back.out(1.7)",
-        scrollTrigger: {
-          trigger: ".experience-section",
-          start: "top 75%",
-        },
-      });
-
       gsap.from(".timeline", {
         scaleY: 0,
         transformOrigin: "top",
@@ -128,7 +110,7 @@ const Experience = () => {
         },
       });
 
-      gsap.utils.toArray(".timeline-circle").forEach((circle, index) => {
+      gsap.utils.toArray(".timeline-circle").forEach((circle) => {
         gsap.fromTo(
           circle,
           { opacity: 0, scale: 0.5 },
@@ -158,8 +140,19 @@ const Experience = () => {
       className="experience-section py-20 relative overflow-hidden"
     >
       <div className="container mx-auto px-4">
-        <h2 className="experience-title text-5xl font-extrabold mb-16 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-          Work Experience
+        {/* Animate tiêu đề bằng Framer Motion */}
+        <h2 className="text-5xl font-extrabold mb-16 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+          {"Work Experience".split("").map((char, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, y: 50, rotateX: -90 }}
+              whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+              transition={{ duration: 1.2, ease: "backOut", delay: i * 0.02 }}
+              style={{ display: "inline-block" }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
         </h2>
         <div className="relative flex items-center">
           <div className="timeline absolute left-1/2 top-0 bottom-0 w-1 bg-purple-500/40"></div>
