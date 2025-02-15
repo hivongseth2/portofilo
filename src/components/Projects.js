@@ -71,7 +71,7 @@ const ProjectCard = ({ project, index }) => {
   return (
     <motion.div
       ref={cardRef}
-      style={{ y }}
+      // style={{ y }}
       className="project-card w-[60vw] flex-shrink-0 my-2 overflow-hidden mt-40"
     >
       <div className="bg-white bg-opacity-0 backdrop-filter backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden transition-transform duration-300 hover:scale-105">
@@ -80,7 +80,7 @@ const ProjectCard = ({ project, index }) => {
             src={project.image || "/placeholder.svg"}
             alt={project.title}
             layout="fill"
-            objectFit="cover"
+            objectfit="cover"
             className="transition-transform duration-300 transform hover:scale-110"
           />
         </div>
