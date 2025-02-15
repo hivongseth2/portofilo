@@ -5,8 +5,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
 import { useAnimation } from "./AnimationProvider";
-import { SplitText } from "gsap-trial/SplitText";
-// Import SplitText
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -22,25 +20,8 @@ const Contact = () => {
   useEffect(() => {
     if (prefersReducedMotion) return;
 
+    // Chỉ dùng gsap cho phần form, không dùng SplitText nữa
     const ctx = gsap.context(() => {
-      // Split text animation
-      const splitTitle = new SplitText(".contact-title", {
-        type: "chars, words",
-      });
-
-      gsap.from(splitTitle.chars, {
-        opacity: 0,
-        y: 20,
-        rotateX: -90,
-        stagger: 0.02,
-        duration: 0.8,
-        ease: "back.out(1.7)",
-        scrollTrigger: {
-          trigger: ".contact-section",
-          start: "top 80%",
-        },
-      });
-
       gsap.from(".contact-form", {
         y: 50,
         opacity: 0,
@@ -73,9 +54,16 @@ const Contact = () => {
       className="contact-section py-20 relative overflow-hidden"
     >
       <div className="container mx-auto px-4">
-        <h2 className="contact-title text-4xl font-bold mb-16 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+        {/* Sử dụng motion.h2 để animate tiêu đề */}
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: "backOut" }}
+          className="contact-title text-4xl font-bold mb-16 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600"
+        >
           Get In Touch
-        </h2>
+        </motion.h2>
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSubmit} className="contact-form space-y-6">
             <motion.div

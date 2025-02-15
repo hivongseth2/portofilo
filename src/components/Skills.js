@@ -5,9 +5,9 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
 import { useAnimation } from "../components/AnimationProvider";
-import { SplitText } from "gsap-trial/SplitText";
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
+// Chỉ đăng ký ScrollTrigger (không dùng SplitText nữa)
+gsap.registerPlugin(ScrollTrigger);
 
 const skillCategories = [
   {
@@ -106,23 +106,7 @@ const Skills = () => {
     if (prefersReducedMotion) return;
 
     const ctx = gsap.context(() => {
-      const splitTitle = new SplitText(".skills-title", {
-        type: "chars, words",
-      });
-
-      gsap.from(splitTitle.chars, {
-        opacity: 0,
-        y: 20,
-        rotateX: -90,
-        stagger: 0.02,
-        duration: 0.8,
-        ease: "back.out(1.7)",
-        scrollTrigger: {
-          trigger: ".skills-section",
-          start: "top 80%",
-        },
-      });
-
+      // Chỉ animate phần categories bằng gsap
       gsap.from(".skills-category", {
         y: 50,
         opacity: 0,
@@ -146,8 +130,19 @@ const Skills = () => {
       className="skills-section py-20 relative overflow-hidden"
     >
       <div className="container mx-auto px-4">
+        {/* Sử dụng Framer Motion để animate chữ tiêu đề */}
         <h2 className="skills-title text-4xl font-bold mb-16 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
-          Technical Skills
+          {"Technical Skills".split("").map((char, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, y: 20, rotateX: -90 }}
+              whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+              transition={{ duration: 0.8, ease: "backOut", delay: i * 0.02 }}
+              style={{ display: "inline-block" }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
           {skillCategories.map((category, categoryIndex) => (
